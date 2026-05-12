@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+
+# Database (大文件，按需下载)
+data/lockbot.db
+data/lockbot.db-*
+
+# Checkpoint (进度文件)
+data/.checkpoint/
+
+# Logs
+logs/*.log
+
+# Export (爬取数据较大，按需生成)
+data/export/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,180 @@
+{
+  "火焰冲击": {
+    "element": "fire",
+    "power": 95,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "火花": {
+    "element": "fire",
+    "power": 65,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "烈焰冲击": {
+    "element": "fire",
+    "power": 110,
+    "accuracy": 0.95,
+    "priority": 0
+  },
+  "火焰漩涡": {
+    "element": "fire",
+    "power": 85,
+    "accuracy": 0.9,
+    "priority": 0
+  },
+  "火焰踢": {
+    "element": "fire",
+    "power": 75,
+    "accuracy": 0.95,
+    "priority": 0
+  },
+  "烈火冲击": {
+    "element": "fire",
+    "power": 90,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "水炮": {
+    "element": "water",
+    "power": 100,
+    "accuracy": 0.9,
+    "priority": 0
+  },
+  "水枪": {
+    "element": "water",
+    "power": 60,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "花瓣舞": {
+    "element": "grass",
+    "power": 90,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "藤鞭": {
+    "element": "grass",
+    "power": 65,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "魔法叶": {
+    "element": "grass",
+    "power": 70,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "能量吸收": {
+    "element": "grass",
+    "power": 50,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "冰霜冲击": {
+    "element": "ice",
+    "power": 100,
+    "accuracy": 0.95,
+    "priority": 0
+  },
+  "冰冻之风": {
+    "element": "ice",
+    "power": 70,
+    "accuracy": 0.95,
+    "priority": 0
+  },
+  "雷电冲击": {
+    "element": "electric",
+    "power": 95,
+    "accuracy": 0.95,
+    "priority": 0
+  },
+  "放电": {
+    "element": "electric",
+    "power": 80,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "雷光": {
+    "element": "electric",
+    "power": 110,
+    "accuracy": 0.85,
+    "priority": 0
+  },
+  "抓挠": {
+    "element": "normal",
+    "power": 40,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "撞击": {
+    "element": "normal",
+    "power": 50,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "叫声": {
+    "element": "normal",
+    "power": 0,
+    "accuracy": 1.0,
+    "priority": 0,
+    "effect": "降低对手攻击"
+  },
+  "尾巴拍打": {
+    "element": "normal",
+    "power": 45,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "催眠粉": {
+    "element": "grass",
+    "power": 0,
+    "accuracy": 0.75,
+    "priority": 0,
+    "effect": "使对手睡眠"
+  },
+  "寄生种子": {
+    "element": "grass",
+    "power": 0,
+    "accuracy": 0.9,
+    "priority": 0,
+    "effect": "每回合吸取对手 HP"
+  },
+  "龙息": {
+    "element": "dragon",
+    "power": 80,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "空气切割": {
+    "element": "flying",
+    "power": 75,
+    "accuracy": 0.95,
+    "priority": 0
+  },
+  "日光束": {
+    "element": "grass",
+    "power": 120,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "尾击": {
+    "element": "normal",
+    "power": 55,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "践踏": {
+    "element": "normal",
+    "power": 65,
+    "accuracy": 1.0,
+    "priority": 0
+  },
+  "嘶鸣": {
+    "element": "normal",
+    "power": 0,
+    "accuracy": 1.0,
+    "priority": 0,
+    "effect": "降低对手速度"
+  }
+}
