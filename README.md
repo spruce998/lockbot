@@ -13,6 +13,91 @@
 - ✅ 输入控制模块（拟人化操作）
 - ✅ PVP 决策引擎（属性克制）
 - ✅ 反检测系统
+- ✅ BWIKI 数据爬虫（自动采集宠物、技能数据）
+
+---
+
+## 📊 数据采集
+
+本项目通过 BWIKI 社区 Wiki 自动采集洛克王国世界的游戏数据，为 PVP 决策引擎提供基础数据支持。
+
+### 数据来源
+
+| 数据源 | 地址 | 数据协议 |
+|--------|------|---------|
+| **BWIKI 洛克王国世界** | https://wiki.biligame.com/rocom/ | [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) |
+| 游戏客户端 | 洛克王国世界 PC 端 | 官方游戏（仅截图验证用） |
+
+**BWIKI 简介**：
+- 由 B 站社区维护的洛克王国世界 Wiki
+- 创建于 2024年9月，截至 2026年5月已有 12,467+ 个页面、1,039+ 位活跃编辑
+- 包含完整的精灵图鉴、技能图鉴、克制计算器等
+
+### 已采集数据汇总
+
+| 数据类型 | 数量 | 状态 |
+|---------|------|------|
+| 宠物（精灵） | **475** 条 | ✅ 已完成 |
+| 技能 | **485** 条 | ✅ 已完成 |
+| 属性克制关系 | **60** 条 | ⚠️ 需游戏内验证 |
+| 宠物-技能关联 | **35,938** 条 | ✅ 已完成 |
+
+### 宠物属性分布
+
+| 属性 | 数量 | 属性 | 数量 |
+|------|------|------|------|
+| 草 | 50 | 翼 | 33 |
+| 水 | 47 | 冰 | 30 |
+| 地 | 41 | 普通 | 29 |
+| 火 | 32 | 幽 | 23 |
+| 虫 | 23 | 恶 | 23 |
+| 机械 | 22 | 武 | 22 |
+| 电 | 21 | 光 | 20 |
+| 毒 | 19 | 萌 | 18 |
+| 幻 | 17 | 龙 | 5 |
+
+### 爬虫使用说明
+
+```bash
+# 运行爬虫（全量爬取）
+python scripts/bwiki_crawler.py --all --import-db
+
+# 测试模式（每种只爬 5 条）
+python scripts/bwiki_crawler.py --test
+
+# 断点续传（中断后继续）
+python scripts/bwiki_crawler.py --pets --resume
+
+# 重置断点重新爬取
+python scripts/bwiki_crawler.py --pets --reset
+```
+
+### 爬虫特性
+
+- **防封 7 层防护**：请求限速、UA 轮换、会话管理、指数退避、断点续传、分批休息、时间分散
+- **请求间隔**：2-5 秒随机延迟，每批次（20 个）间休息 10-30 秒
+- **断点续传**：中断后可自动恢复，不会重复爬取已完成的数据
+
+### 数据存储
+
+```
+data/
+├── lockbot.db                    # SQLite 数据库（主数据）
+├── export/
+│   ├── pets.json                 # 宠物 JSON 导出
+│   ├── skills.json               # 技能 JSON 导出
+│   ├── type_chart.json           # 克制关系 JSON
+│   └── crawl_report.json         # 爬取汇总报告
+├── .checkpoint/
+│   ├── pets.json                 # 宠物断点记录
+│   └── skills.json               # 技能断点记录
+└── pet_db.json / skill_db.json   # 旧版 JSON（兼容保留）
+```
+
+> ⚠️ `data/lockbot.db`、`data/export/`、`data/.checkpoint/` 已加入 `.gitignore`，不包含在仓库中。
+> 克隆后运行 `python scripts/init_db.py` 初始化数据库，再运行爬虫采集数据。
+
+---
 
 ## 🚀 快速开始
 
@@ -38,7 +123,20 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. 配置
+### 3. 初始化数据库
+
+```bash
+python scripts/init_db.py
+```
+
+### 4. 采集数据
+
+```bash
+# 从 BWIKI 爬取宠物、技能数据并导入数据库
+python scripts/bwiki_crawler.py --all --import-db
+```
+
+### 5. 配置
 
 编辑 `config.yaml`：
 
@@ -48,11 +146,13 @@ game:
   capture_region: [0, 0, 1920, 1080]  # 截图区域
 ```
 
-### 4. 运行
+### 6. 运行
 
 ```bash
 python main.py
 ```
+
+---
 
 ## 📁 项目结构
 
@@ -63,77 +163,52 @@ lockbot/
 │   ├── recognizer.py       # 图像识别
 │   └── controller.py       # 输入控制
 ├── data/                    # 数据资源
-│   ├── templates/          # UI 模板图片
-│   ├── pet_db.json         # 宠物数据库
-│   └── skill_db.json       # 技能数据库
+│   ├── lockbot.db          # SQLite 数据库（需运行爬虫后生成）
+│   ├── export/             # 爬虫导出文件
+│   └── .checkpoint/        # 断点记录
 ├── features/                # 功能模块
 │   └── pvp/
 │       └── decision.py     # PVP 决策引擎
 ├── utils/
 │   └── anti_detect.py      # 反检测
+├── scripts/                 # 脚本
+│   ├── bwiki_crawler.py    # BWIKI 数据爬虫
+│   └── init_db.py          # 数据库初始化
+├── docs/                    # 文档
+│   └── 技术方案_v2.0.md    # 详细技术方案
 ├── config.yaml              # 配置文件
+├── requirements.txt         # 依赖列表
 └── main.py                  # 主入口
 ```
 
-## 🎯 Phase 1 待完成任务
+---
 
-### 第一步：收集游戏素材
+## 🎯 开发计划
 
-运行测试截图工具：
+### Phase 1 - MVP（辅助工具） ✅
+- [x] 屏幕捕获模块
+- [x] 图像识别模块（模板匹配）
+- [x] 输入控制模块（拟人化操作）
+- [x] PVP 决策引擎（属性克制）
+- [x] 反检测系统
+- [x] BWIKI 数据爬虫
+- [ ] 游戏内模板图片采集
+- [ ] 窗口捕获 + 战斗状态检测
 
-```bash
-python core/capture.py
-```
+### Phase 2 - 半自动（2-4 周）
+- [ ] 自动点击技能按钮
+- [ ] 战斗状态完整检测
+- [ ] 反检测增强（行为模拟）
+- [ ] 图形化控制面板（PyQt6）
+- [ ] OCR 文字识别
 
-这会生成 `test_capture.png`，用于：
+### Phase 3 - 全自动（4-8 周）
+- [ ] 自动排队进入 PVP
+- [ ] 自动跑图功能
+- [ ] 资源点识别与采集（YOLO）
+- [ ] 高级 AI 决策（Minimax / MCTS）
 
-1. 确认窗口捕获是否正常工作
-2. 截取技能图标、宠物头像等模板图片
-
-### 第二步：创建模板图片
-
-在 `data/templates/` 目录下放置以下模板：
-
-- `skill_slot_1.png` - 技能栏位置 1
-- `skill_slot_2.png` - 技能栏位置 2
-- `skill_slot_3.png` - 技能栏位置 3
-- `skill_slot_4.png` - 技能栏位置 4
-- `pet_fire.png` - 火系宠物标识
-- `pet_water.png` - 水系宠物标识
-- `pet_grass.png` - 草系宠物标识
-- `hp_bar.png` - 血条模板
-- `battle_ui.png` - 战斗界面标识
-
-**如何获取模板**：
-1. 手动截图游戏界面
-2. 用画图工具裁剪出需要的图标
-3. 保存到 `data/templates/` 目录
-
-### 第三步：完善宠物数据库
-
-编辑 `data/pet_db.json`，添加你拥有的宠物信息：
-
-```json
-{
-  "你的宠物名": {
-    "element": "fire",  // fire/water/grass/electric/ice/...
-    "hp": 100,
-    "speed": 80,
-    "skills": ["技能 1", "技能 2", "技能 3", "技能 4"]
-  }
-}
-```
-
-### 第四步：测试运行
-
-```bash
-python main.py
-```
-
-观察日志输出，确认：
-- 窗口捕获正常
-- 战斗状态检测正常
-- 决策逻辑正常
+---
 
 ## 🔒 反检测功能
 
@@ -146,50 +221,9 @@ python main.py
 | 点击位置偏移 | 3-8 像素随机偏移 |
 | 活跃时间限制 | 仅在规定时间段运行 |
 | 定时休息 | 每 1-2 小时暂停 5-15 分钟 |
+| UA 轮换 | 每 50 次请求自动切换 User-Agent |
 
-## 📊 下一步开发计划
-
-### Phase 2 - 半自动（2-4 周）
-- [ ] 完善宠物识别（YOLO 模型）
-- [ ] 自动点击技能按钮
-- [ ] 战斗状态完整检测
-- [ ] 图形化控制面板
-
-### Phase 3 - 全自动（4-8 周）
-- [ ] 自动排队进入 PVP
-- [ ] 自动跑图功能
-- [ ] 资源点识别与采集
-- [ ] 高级反检测（行为学习）
-
-## 🛠️ 开发指南
-
-### 添加新宠物
-
-1. 在 `data/pet_db.json` 中添加宠物信息
-2. 截取宠物头像模板到 `data/templates/`
-3. 在识别器中注册新模板
-
-### 调整技能位置
-
-编辑 `main.py` 中的 `skill_positions`：
-
-```python
-skill_positions = [
-    (800, 900),  # 根据你的屏幕分辨率调整
-    (950, 900),
-    (1100, 900),
-    (1250, 900)
-]
-```
-
-### 调试模式
-
-```bash
-# 设置日志级别为 DEBUG
-# 编辑 config.yaml:
-logging:
-  level: "DEBUG"
-```
+---
 
 ## ⚠️ 风险提示
 
@@ -198,7 +232,15 @@ logging:
 3. **适度使用**: 避免长时间连续运行
 4. **本地运行**: 不要使用来源不明的脚本
 
+---
+
 ## 📝 更新日志
+
+### v0.2.0 (2026-05-12)
+- ✅ BWIKI 数据爬虫（v2 DOM 结构化解析）
+- ✅ 数据库升级为 SQLite（10 张表）
+- ✅ 爬取 475 个宠物、485 个技能数据
+- ✅ 数据自动导入数据库
 
 ### v0.1.0 (2026-05-12)
 - 初始版本
@@ -206,9 +248,18 @@ logging:
 - MVP 决策引擎
 - 基础反检测
 
+---
+
 ## 📞 问题反馈
 
 遇到问题时，请提供：
-1. 错误日志（`logs/lockbot.log`）
+1. 错误日志（`logs/crawler_*.log` 或 `logs/lockbot.log`）
 2. 游戏分辨率
 3. 操作系统版本
+
+## 📄 许可证
+
+本项目代码采用 MIT 许可证。
+
+游戏数据来源于 BWIKI 社区（https://wiki.biligame.com/rocom/），采用 [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) 协议。
+使用本项目数据时请遵守相应协议，注明来源。
