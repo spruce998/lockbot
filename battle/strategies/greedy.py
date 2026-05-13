@@ -3,17 +3,25 @@
 
 选择当前回合期望收益最高的技能。
 
-评分维度（按权重排序）：
-1. 属性克制倍率（最高权重）
-2. 有效伤害（威力 × 克制倍率）
-3. 能量利用效率（威力 / 能耗）
-4. 当前状态需求（低血量回复、高血量输出）
-5. 技能位置效果
-6. 特殊机制（迸发/蓄力/永久加成）
-7. 敌方行为预测（防御应对）
+真实游戏规则：
+- 能量不会每回合自然恢复
+- 使用聚能回复 5 能量（状态技能，可被打断）
+- 先后手 = 先手值 > 速度
+- 双属性克制倍率相乘
 """
 from .base import DecisionStrategy
-from ..context import BattleContext, DecisionResult
+from ..context import BattleContext, DecisionResult, Skill
+
+
+# 聚能技能（特殊行动，不是携带技能）
+JUNENG_SKILL = Skill(
+    name="聚能",
+    element="普通",
+    category="状态",
+    cost=0,  # 不消耗能量
+    power=0,
+    effect="回复5能量。可被应对状态的技能打断。",
+)
 
 
 class GreedyStrategy(DecisionStrategy):
@@ -33,58 +41,64 @@ class GreedyStrategy(DecisionStrategy):
             reasons = []
 
             # --- 1. 能量检查 ---
-            if skill.energy_cost > (ctx.my_pet.current_energy if ctx.my_pet else 0):
+            my_energy = ctx.my_pet.current_energy if ctx.my_pet else 0
+            if skill.cost > my_energy:
                 continue
 
             # --- 2. 属性克制（最高权重）---
             if ctx.enemy_pet:
-                type_mult = self._get_type_multiplier(skill.element, ctx.enemy_pet.element)
+                type_mult = self._get_type_multiplier(
+                    skill.element, ctx.enemy_pet.element, ctx.enemy_pet.sub_element)
             else:
                 type_mult = 1.0
 
-            if type_mult >= 2.0:
+            if type_mult >= 4.0:
+                score += 200 * type_mult
+                reasons.append(f"双属性克制 ×{type_mult}")
+            elif type_mult >= 2.0:
                 score += 100 * type_mult
                 reasons.append(f"克制 ×{type_mult}")
+            elif type_mult <= 0.25:
+                score *= 0.2
+                reasons.append(f"双重抵抗 ×{type_mult}")
             elif type_mult <= 0.5:
-                score *= 0.3
+                score *= 0.4
                 reasons.append(f"被抵抗 ×{type_mult}")
 
             # --- 3. 伤害计算 ---
-            if skill.damage_type in ('物攻', '魔攻'):
+            if skill.category in ('物攻', '魔攻'):
                 base_dmg = self._calc_damage(skill, ctx)
-                score += base_dmg * type_mult
+                score += base_dmg * max(type_mult, 1.0)
                 reasons.append(f"期望伤害 {base_dmg:.0f}")
-            elif skill.damage_type == '防御':
-                score += 40
+            elif skill.category == '防御':
+                score += 50
                 reasons.append("防御")
-            elif skill.damage_type == '状态':
-                if skill.is_buff:
-                    score += 50
-                    reasons.append("增益")
-                elif skill.is_debuff:
-                    score += 45
-                    reasons.append("减益")
-                elif skill.is_energy_recover:
-                    score += 60
+            elif skill.category == '状态':
+                if skill.is_energy_recover:
+                    score += 80  # 高价值：回复能量
                     reasons.append("回复能量")
                 elif skill.is_heal:
-                    score += 55
+                    score += 60
                     reasons.append("回复生命")
+                elif skill.is_buff:
+                    score += 55
+                    reasons.append("增益")
+                elif skill.is_debuff:
+                    score += 50
+                    reasons.append("减益")
                 elif skill.is_dot:
-                    score += 35
+                    score += 40
                     reasons.append("持续伤害")
                 else:
-                    score += 25
+                    score += 30
                     reasons.append("状态")
 
             # --- 4. 能量效率 ---
-            if skill.energy_cost > 0:
-                efficiency = (skill.power * type_mult) / skill.energy_cost
+            if skill.cost > 0:
+                efficiency = (skill.power * max(type_mult, 1.0)) / skill.cost
                 score += efficiency * 5
-                if efficiency > 20:
-                    reasons.append(f"高能量效率")
             else:
-                score += 15  # 0 能耗技能有额外分
+                score += 20  # 0 能耗有额外分
                 reasons.append("0 能耗")
 
             # --- 5. 位置效果 ---
@@ -109,18 +123,23 @@ class GreedyStrategy(DecisionStrategy):
             # --- 8. 血量因素 ---
             my_hp = ctx.my_pet.hp_percent if ctx.my_pet else 1.0
             if my_hp < 0.3:
-                if skill.is_heal or skill.is_energy_recover:
-                    score *= 2.0
+                if skill.is_heal:
+                    score *= 2.5
                     reasons.append("危急回复")
-            elif my_hp < 0.5:
-                if skill.damage_type == '防御':
-                    score *= 1.3
+                elif skill.category == '防御':
+                    score *= 1.5
                     reasons.append("危险防御")
+                elif skill.is_energy_recover:
+                    score *= 1.8
+                    reasons.append("低血量攒能量")
+            elif my_hp < 0.5:
+                if skill.category == '防御':
+                    score *= 1.2
 
             # --- 9. 敌方预测 ---
             if ctx.enemy_predicted_skill:
-                if ctx.enemy_predicted_skill.damage_type in ('物攻', '魔攻'):
-                    if skill.damage_type == '防御':
+                if ctx.enemy_predicted_skill.category in ('物攻', '魔攻'):
+                    if skill.category == '防御':
                         score *= 1.5
                         reasons.append("应对攻击")
 
@@ -130,20 +149,34 @@ class GreedyStrategy(DecisionStrategy):
             if permanent_value > 0:
                 reasons.append("永久加成")
 
+            # --- 11. 能量管理 ---
+            # 如果能量很低且没有回复技能 → 考虑聚能
+            if my_energy <= 1 and skill.cost == 0 and skill.is_energy_recover:
+                score *= 1.5
+                reasons.append("能量不足回复")
+
             if score > best_score:
                 best_score = score
                 best_skill = skill
                 best_reasons = reasons
 
+        # 如果所有技能能量都不够 → 考虑聚能
         if not best_skill:
-            # 所有技能能量都不够 → 选能耗最低的
-            min_cost = min(s.energy_cost for s in ctx.my_equipped_skills)
-            for s in ctx.my_equipped_skills:
-                if s.energy_cost == min_cost:
-                    best_skill = s
-                    best_reasons = [f"能量不足，使用最低能耗({min_cost})技能"]
-                    best_score = 0
-                    break
+            return DecisionResult(
+                skill=JUNENG_SKILL, score=50,
+                reasons=["能量不足，聚能回复 5 能量"],
+                strategy=self.name(), confidence=0.8,
+            )
+
+        # 如果能量很低（≤1），且聚能的价值高于当前最佳技能 → 推荐聚能
+        my_energy = ctx.my_pet.current_energy if ctx.my_pet else 0
+        if my_energy <= 1 and best_score < 60:
+            return DecisionResult(
+                skill=JUNENG_SKILL, score=55,
+                reasons=[f"能量不足({my_energy})，聚能回复 5 能量"],
+                strategy=self.name(), confidence=0.7,
+                enemy_prediction=ctx.enemy_predicted_skill,
+            )
 
         return DecisionResult(
             skill=best_skill,
